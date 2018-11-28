@@ -7,7 +7,7 @@
 #define BTN_2 14
 #define LED_2 12
 
-#define MAX_FADE_VALUE 512
+#define MAX_LED_VALUE 512
 
 unsigned int valLed1 = 0;
 boolean dirLed1 = true;
@@ -20,6 +20,16 @@ long lastTimeLed2 = 0;
 boolean fadeLed2 = false;
 
 
+long lastTimeUpdate = 0;
+long lastTimeChesk = 0;
+
+unsigned long timeButton1;
+unsigned long durationButton1;
+boolean timerButton1;
+
+unsigned long timeButton2;
+unsigned long durationButton2;
+boolean timerButton2;
 
 
 void ConnectWiFi() {
@@ -51,9 +61,9 @@ void UpdateFirmware() {
 void setFadeLed1(boolean val) {
   fadeLed1 = val;
   if (val) {
-    valLed1 = MAX_FADE_VALUE;
+    valLed1 = MAX_LED_VALUE;
   } else {
-    analogWrite(LED_1, MAX_FADE_VALUE);
+    analogWrite(LED_1, MAX_LED_VALUE);
   }
 }
 
@@ -64,9 +74,9 @@ boolean isFadeLed1() {
 void setFadeLed2(boolean val) {
   fadeLed2 = val;
   if (val) {
-    valLed2 = MAX_FADE_VALUE;
+    valLed2 = MAX_LED_VALUE;
   } else {
-    analogWrite(LED_2, MAX_FADE_VALUE);
+    analogWrite(LED_2, MAX_LED_VALUE);
   }
 }
 
@@ -126,7 +136,7 @@ void sendReq(int i, int val) {
 void fadeLed() {
   if (millis() - lastTimeLed1 > 5 && fadeLed1) {
     analogWrite(LED_1, valLed1);
-    if (valLed1 <  MAX_FADE_VALUE && dirLed1) {
+    if (valLed1 <  MAX_LED_VALUE && dirLed1) {
       valLed1++;
     } else {
       dirLed1 = false;
@@ -141,7 +151,7 @@ void fadeLed() {
 
   if (millis() - lastTimeLed2 > 5 && fadeLed2) {
     analogWrite(LED_2, valLed2);
-    if (valLed2 <  MAX_FADE_VALUE && dirLed2) {
+    if (valLed2 <  MAX_LED_VALUE && dirLed2) {
       valLed2++;
     } else {
       dirLed2 = false;
@@ -185,8 +195,8 @@ void getIO() {
     if (httpCode == 200 ) { //Check the returning code
       String payload = http.getString();   //Get the request response payload
 
-      Serial.println(payload.substring(1, 2));                    //Print the response payload
-      Serial.println(payload.substring(3, 4));
+      //Serial.println(payload.substring(1, 2));                    //Print the response payload
+      //Serial.println(payload.substring(3, 4));
 
       if (payload.substring(1, 2).equals("1")) {
         if (!isFadeLed1()) {
@@ -213,35 +223,17 @@ void getIO() {
 
 void setup() {
   Serial.begin(115200);
-  //  blinkLed();
   ConnectWiFi();
   UpdateFirmware();
   getIO();
   pinMode(BTN_1, INPUT);
-  //attachInterrupt(digitalPinToInterrupt(BTN_1), btn1, FALLING);
-
   pinMode(BTN_2, INPUT);
-  //attachInterrupt(digitalPinToInterrupt(BTN_2), btn2, FALLING);
 
   pinMode(LED_1, OUTPUT);
-  analogWrite(LED_1, MAX_FADE_VALUE);
 
   pinMode(LED_2, OUTPUT);
-  analogWrite(LED_2, MAX_FADE_VALUE);
-
 }
 
-long lastTimeUpdate = 0;
-long lastTimeChesk = 0;
-
-
-unsigned long timeButton1;
-unsigned long durationButton1;
-boolean timerButton1;
-
-unsigned long timeButton2;
-unsigned long durationButton2;
-boolean timerButton2;
 
 void loop() {
   fadeLed();
@@ -269,8 +261,13 @@ void loop() {
 
   if (durationButton1 > 5000 && !timerButton1 && durationButton2 > 5000 && !timerButton2) {
     Serial.println("btn");
-    durationButton1 = 0;
-    durationButton2 = 0;
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;  //Declare an object of class HTTPClient
+      String resp = "reset";
+      http.begin("http://192.168.1.141/" + resp);
+      http.GET();
+      http.end();
+    }
     delay(500);
     ESP.restart();
   }
